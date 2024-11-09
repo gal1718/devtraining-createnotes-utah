@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller = function($rootScope, $scope, spModal, spUtil) {
+    /* widget controller */
+    var c = this;
+	
+    $rootScope.$on('selectNote', function(event, data) {
+		console.log("rootdsdjkskfjsdk");
+        c.server.get({
+            action: 'getNote',
+            noteId: $rootScope.noteId
+        }).then(function(response) {
+			console.log("resp: " + JSON.stringify(response.data));
+			console.log("c.data os: " + JSON.stringify(c.data));
+			console.log("data os: " + JSON.stringify(data));
+            c.data.title = response.data.note.title;
+            c.data.note = response.data.note.note;
+            c.data.noteId = response.data.note.sys_id;
+        });
+    });
+
+	c.updateNote = function(updateType){
+		c.server.get({
+			action: 'updateNote',
+			noteId: c.data.noteId,
+			noteBody: c.data.note,
+			noteTitle: c.data.title
+		}).then(function(r){
+			var updatedData = {
+				noteId: c.data.noteId,
+				noteTitle: c.data.title, 
+				noteBody: c.data.note
+			};
+			$rootScope.$emit('noteUpdated', updatedData);
+		});
+	};
+
+	c.confirmDelete = function(){
+		spModal.confirm("Are you sure you want to delete this record?").then(function(confirmed){
+			if(confirmed){
+				c.deleteNote();
+			}
+		});
+	};
+
+	c.deleteNote = function(){
+		c.server.get({
+			action: 'deleteNote',
+			noteId: c.data.noteId
+		}).then(function(r){
+			spUtil.addTrivialMessage("The " + c.data.title + " record has been deleted");
+			$rootScope.$emit('deleteNote', c.data.noteId);
+			c.data.title = "";
+			c.data.note = "";
+			c.data.noteId = "";
+		});
+	};
+
+	
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css/>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>false</has_preview>
+        <id>notes-body-2</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]></link>
+        <name>Notes body 2</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function() {
+    /* populate the 'data' object */
+    /* e.g., data.table = $sp.getValue('table'); */
+    data.ident = "this is the notes body widget";
+
+    if (input && input.noteId) {
+		console.log("selectnoteeeeee");
+        var noteGr = new GlideRecord("x_snc_createnotes_note");
+        if (noteGr.get(input.noteId)) {
+            if (input.action == "getNote") {
+                data.note = {};
+                $sp.getRecordValues(data.note, noteGr, "title,note,sys_id");
+				console.log(JSON.stringify(data.note));
+            }
+			else if(input.action == "updateNote"){
+				noteGr.title = input.noteTitle;
+				noteGr.note = input.noteBody;
+				noteGr.update();
+			}
+			
+			else if(input.action == 'deleteNote'){
+				noteGr.deleteRecord();
+			}
+        }
+    }
+
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2024-11-07 07:43:51</sys_created_on>
+        <sys_id>511daed053b1961029af38e0a0490e2a</sys_id>
+        <sys_mod_count>34</sys_mod_count>
+        <sys_name>Notes body 2</sys_name>
+        <sys_package display_value="CreateNotes" source="x_snc_createnotes">df5fd9a5090232007f44e1046c8ff69f</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="CreateNotes">df5fd9a5090232007f44e1046c8ff69f</sys_scope>
+        <sys_update_name>sp_widget_511daed053b1961029af38e0a0490e2a</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2024-11-09 18:10:25</sys_updated_on>
+        <template><![CDATA[<div class="panel panel-default" ng-show="c.data.noteId">
+  <div class="panel-heading clearfix">
+    <div class="row">
+      <div class="col-md-11">
+        <input class="form-control" id="note-title" ng-change="c.updateNote('title')" ng-model-options="{debounce: 1000}" ng-model="c.data.title"/>
+      </div>
+      <delete-button-confirm></delete-button-confirm>
+    </div>
+  </div>
+  <div class="panel-body">
+    <textarea class="form-control" id="note-body" ng-change="c.updateNote('body')" ng-model-options="{debounce: 1000}" ng-model="c.data.note">
+    </textarea>
+  </div>
+  
+</div>]]></template>
+    </sp_widget>
+    <sys_es_latest_script action="INSERT_OR_UPDATE">
+        <id>511daed053b1961029af38e0a0490e2a</id>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2024-11-07 07:43:50</sys_created_on>
+        <sys_id>af2daa1453b1961029af38e0a0490ea5</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2024-11-07 07:43:50</sys_updated_on>
+        <table>sp_widget</table>
+        <use_es_latest>true</use_es_latest>
+    </sys_es_latest_script>
+</record_update>

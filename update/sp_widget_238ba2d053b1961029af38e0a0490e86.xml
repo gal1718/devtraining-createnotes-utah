@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller = function($rootScope, $scope, spUtil) {
+    /* widget controller */
+    var c = this;
+    var selectedNotePos = 0;
+
+    c.test = function() {
+        c.server.update();
+    };
+
+    c.selectItem = function(idx) {
+        var id = c.data.notes[idx].sys_id;
+        console.log("note sys_id: " + id);
+        selectedNotePos = idx;
+        $rootScope.noteId = id;
+        $rootScope.$emit('selectNote', id);
+    };
+
+    c.newNote = function() {
+        c.server.get({
+            action: "newNote"
+        }).then(function(res) {
+            c.data.notes.unshift(res.data.newNote);
+            c.selectItem(0);
+        });
+    };
+
+    $rootScope.$on('noteUpdated', function(event, data) {
+        // var updatedNoteIndex = c.data.notes.findIndex(function(item){
+        // 	return item.sys_id == data.noteId;
+        // });
+        // c.data.notes[updatedNoteIndex].title = data.noteTitle;
+        // c.data.notes[updatedNoteIndex].note = data.noteBody;
+        c.data.notes[selectedNotePos].title = data.noteTitle;
+        c.data.notes[selectedNotePos].note = data.noteBody;
+    });
+
+    $rootScope.$on('deleteNote', function(event, data) {
+        c.data.notes.splice(selectedNotePos, 1);
+    });
+
+    c.snNoteUpdate = function(recSysId, field, newFieldValue) {
+        var newNotes = c.data.notes.map(function(note) {
+            if (note.sys_id != recSysId) {
+                return note;
+            } else {
+                var newRec = (field == 'title') ? {
+                    ...note,
+                    title: newFieldValue
+                } : {
+                    ...note,
+                    note: newFieldValue
+                };
+                return newRec;
+            }
+        });
+        c.data.notes = newNotes;
+        c.server.update();
+    };
+
+    c.snNoteDelete = function(recSysId) {
+        // var newNotes = c.data.notes.map(function(note) {
+        //     if (note.sys_id != recSysId)
+        //         return note;
+        // });
+        // c.data.notes = newNotes;
+        c.server.get({
+            action: 'deleteNote',
+            delNoteSysId: recSysId
+        }).then(function(r) {
+            c.data.notes = r.data.notes;
+        });
+    };
+
+
+    spUtil.recordWatch($scope, 'x_snc_createnotes_note', "numberISNOTEMPTY", function(name) {
+        console.log("name: " + JSON.stringify(name));
+        console.log("name.data: " + JSON.stringify(name.data));
+
+        if (name.data.operation == 'insert') {
+            c.server.refresh();
+        } else if (name.data.operation == 'update') {
+            if (name.data.changes == 'note')
+                c.snNoteUpdate(name.data.sys_id, 'note', name.data.record.note.display_value);
+            else if (name.data.changes == 'title')
+                c.snNoteUpdate(name.data.sys_id, 'title', name.data.record.title.display_value);
+        } else if (name.data.operation == 'delete') {
+            c.snNoteDelete(name.data.sys_id);
+        }
+    });
+
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css/>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>true</has_preview>
+        <id>notes_list_2</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {
+  
+}]]></link>
+        <name>Notes list 2</name>
+        <option_schema>[{"hint":"list title","name":"title","section":"other","default_value":"Notes","label":"title","type":"string"},{"hint":"Select the maximum number of records to display","name":"maximum_records_to_display","section":"other","default_value":"5","label":"Maximum records to display","type":"choice","choices":[{"label":"2","value":"2"},{"label":"3","value":"3"},{"label":"5","value":"5"},{"label":"7","value":"7"},{"label":"11","value":"11"},{"label":"13","value":"13"},{"label":"17","value":"17"}]}]</option_schema>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function() {
+    /* populate the 'data' object */
+    /* e.g., data.table = $sp.getValue('table'); */
+    data.ident = "this is the note likt widget";
+    data.notes = [];
+    console.log("server start");
+
+    var notesGr = new GlideRecord("x_snc_createnotes_note");
+    notesGr.addEncodedQuery("user=" + gs.getUserID());
+    notesGr.orderByDesc('sys_created_on');
+    notesGr.setLimit(options.maximum_records_to_display);
+    notesGr.query();
+
+    while (notesGr.next()) {
+        var noteObj = {};
+        $sp.getRecordDisplayValues(noteObj, notesGr, 'number,title,sys_id');
+        noteObj.note = notesGr.note.substring(0, 21);
+        data.notes.push(noteObj);
+    }
+
+    if (input) {
+        console.log("inputtttttt " + JSON.stringify(input));
+        if (input.action == 'newNote') {
+            var newNote = new GlideRecord("x_snc_createnotes_note");
+            newNote.newRecord();
+            id = newNote.insert();
+            data.noteId = id;
+            data.newNote = {};
+            $sp.getRecordValues(data.newNote, newNote, "sys_id,title,note");
+
+        }
+        if (input.action == "deleteNote") {
+            var delNote = new GlideRecord('x_snc_createnotes_note')
+
+            // The notes record should already be gone.  Just
+            // making sure it no longer exists.
+            if (delNote.get(input.delNoteSysId)) {
+                delNote.deleteRecord();
+            }
+
+        }
+    }
+
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2024-11-07 07:37:15</sys_created_on>
+        <sys_id>238ba2d053b1961029af38e0a0490e86</sys_id>
+        <sys_mod_count>70</sys_mod_count>
+        <sys_name>Notes list 2</sys_name>
+        <sys_package display_value="CreateNotes" source="x_snc_createnotes">df5fd9a5090232007f44e1046c8ff69f</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="CreateNotes">df5fd9a5090232007f44e1046c8ff69f</sys_scope>
+        <sys_update_name>sp_widget_238ba2d053b1961029af38e0a0490e86</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2024-11-09 22:06:57</sys_updated_on>
+        <template><![CDATA[<div class="panel panel-default">
+	<div class="panel-heading clearfix">
+    <h3 class="panel-title pull-left">
+      {{::c.options.title}}
+    </h3>
+    <button class="btn btn-default pull-right" ng-click="c.newNote()"> 
+    <span class="glyphicon glyphicon-plus"></span> 
+    </button>
+  </div>
+   <div class="panel-body"> 
+    <input placeholder="Filter" class="form-control" ng-model="noteFilter" /> 
+  </div>
+  <div class="list-group">
+    <a class="list-group-item" ng-click="c.selectItem($index)" ng-repeat="note in c.data.notes | filter: noteFilter">
+      <h4 class="list-group-item-heading">
+        {{note.title}}
+      </h4>
+       <p class="list-group-item-text">
+      {{note.note}}
+    </p>
+    </a>
+    <button ng-click="c.test()">test</button>
+  </div>
+</div>]]></template>
+    </sp_widget>
+    <sys_es_latest_script action="INSERT_OR_UPDATE">
+        <id>238ba2d053b1961029af38e0a0490e86</id>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2024-11-07 07:37:14</sys_created_on>
+        <sys_id>f2ab26d053b1961029af38e0a0490ef3</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2024-11-07 07:37:14</sys_updated_on>
+        <table>sp_widget</table>
+        <use_es_latest>true</use_es_latest>
+    </sys_es_latest_script>
+</record_update>
